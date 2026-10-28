@@ -38,6 +38,9 @@
 
 <div id="hud" class="hidden">
   <div id="cash">$0</div>
+  <div id="dock"><button id="bGar">🚗 Garage <kbd>G</kbd></button><button id="bTp">📍 Teleport <kbd>T</kbd></button><button id="bQ">⭐ Quests <kbd>Q</kbd></button></div>
+  <div id="hp" class="hidden"><i></i><span>HEALTH</span></div>
+  <div id="race" class="hidden"></div><div id="tut" class="hidden"></div><div id="nitro" class="hidden"><i></i><span>NITRO · Shift</span></div>
   <div id="roomtag"></div>
   <div id="jobbox" class="hidden"></div>
   <div id="prompt" class="hidden"></div>
@@ -46,7 +49,7 @@
   <div id="plist" class="hidden"></div>
   <div id="toasts"></div>
   <div id="lockhint" class="hidden">Click to capture the mouse</div>
-  <div id="keys">WASD move · Shift run · Space jump/handbrake · E interact · G garage · L lights · Tab players · Esc pause</div>
+  <div id="keys">WASD move · Shift run / nitro · Space jump/handbrake · E interact · G garage · T teleport · Q quests · F punch · H decorate (inside your home) · R reset to checkpoint · L lights · Esc pause</div>
 </div>
 
 <div id="dealer" class="panel hidden"><div class="inner wide">
@@ -68,6 +71,14 @@
 <div id="housep" class="panel hidden"><div class="inner">
   <button class="close">✕</button><h2 id="houseTitle"></h2><div id="houseBody"></div>
 </div></div>
+
+<div id="shop" class="panel hidden"><div class="inner wide"><button class="close">✕</button><h2>Brad’s Shop</h2><p class="sub">Upgrades apply the next time you get in the car.</p><div id="shopBody"></div></div></div>
+<div id="tp" class="panel hidden"><div class="inner"><button class="close">✕</button><h2>Teleport</h2><div id="tpBody"></div></div></div>
+<div id="quests" class="panel hidden"><div class="inner"><button class="close">✕</button><h2>Quests &amp; Daily Challenges</h2><div id="qBody"></div></div></div>
+
+<div id="venue" class="panel hidden"><div class="inner"><button class="close">✕</button><h2 id="venTitle"></h2><div id="venBody"></div></div></div>
+<div id="mart" class="panel hidden"><div class="inner wide"><button class="close">✕</button><h2>Valley Life Mart</h2><p class="sub">Furniture is delivered straight to your house (max 12 items).</p><div id="martBody"></div></div></div>
+<div id="homep" class="panel hidden"><div class="inner"><button class="close">✕</button><h2>Decorate your home</h2><div id="homeBody"></div></div></div>
 
 <div id="pause" class="panel hidden"><div class="inner">
   <h2>Paused</h2>

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ROAD, BLOCKS, HOUSES, SPECIAL } from '/shared/config.js';
+import { ROAD, BLOCKS, HOUSES, SPECIAL, HOME_SLOTS } from '/shared/config.js';
 
 function rng(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -75,6 +75,7 @@ export function buildWorld(scene) {
 
   // downtown blocks
   for (const bx of BLOCKS) for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    if (bx === -120) continue; // Valley Life Mart stands here
     const w = 18 + R() * 8, d = 18 + R() * 8, h = 12 + R() * 38;
     building(bx + sx * 17, -120 + sz * 17, w, d, h, new THREE.Color().setHSL(R(), 0.25 + R() * 0.2, 0.62 + R() * 0.15).getHex());
   }
@@ -97,7 +98,7 @@ export function buildWorld(scene) {
     for (const bz of [-40, 40]) for (const [ox, oz] of [[-31, -31], [31, -31], [-31, 31], [31, 31], [-31, 0], [31, 0]]) trees.push([bx + ox, bz + oz]);
     for (let i = 0; i < 8; i++) {
       const x = bx + (R() - 0.5) * 62, z = 120 + (R() - 0.5) * 62;
-      if (!HOUSES.some(h => Math.abs(x - h.x) < h.w / 2 + 6 && Math.abs(z - h.z) < h.d / 2 + 6) && !HOUSES.some(h => Math.abs(x - (h.x + 4)) < 4 && Math.abs(z - h.z) < 30)) trees.push([x, z]);
+      if (!HOUSES.some(h => Math.abs(x - h.x) < h.w / 2 + 6 && Math.abs(z - h.z) < h.d / 2 + 6) && !HOUSES.some(h => Math.abs(x - (h.x + 4)) < 4 && Math.abs(z - h.z) < 30) && !HOME_SLOTS.some(h => Math.abs(x - h.x) < 12 && Math.abs(z - h.z) < 11)) trees.push([x, z]);
     }
   }
   const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.25, 0.32, 2.2, 6), std(0x6b4a2b), trees.length);
@@ -157,4 +158,17 @@ export function buildInterior(scene, idx, colliders) {
   add(3, 0.8, 1.6, -3, 0.4, 4, 0x6b4a2b, true);                // dining table
   add(0.3, 2, 0.3, -7.2, 1, -5.8, 0x333333);                   // lamp
   return { ox, oz, spawn: { x: ox, z: oz + D / 2 - 3.5 }, exit: { x: ox, z: oz + D / 2 - 1.4 } };
+}
+
+// Empty, recolourable room for a player home; furniture is added dynamically into room.fg
+export function buildRoom(scene, ox, oz) {
+  const W = 16, D = 14, H = 4.2, mat = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 }), cols = [];
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.2, D), mat(0xb98b5e)); floor.position.set(ox, -0.1, oz); floor.receiveShadow = true; scene.add(floor);
+  const wm = mat(0xe9e2d3);
+  for (const [w, d, x, z] of [[W, 0.4, 0, -D / 2], [W, 0.4, 0, D / 2], [0.4, D, -W / 2, 0], [0.4, D, W / 2, 0]]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), wm); m.position.set(ox + x, H / 2, oz + z); m.castShadow = m.receiveShadow = true; scene.add(m);
+    cols.push({ minx: ox + x - w / 2, maxx: ox + x + w / 2, minz: oz + z - d / 2, maxz: oz + z + d / 2, h: 5 });
+  }
+  const fg = new THREE.Group(); scene.add(fg);
+  return { ox, oz, floor, wm: wm, fg, cols, spawn: { x: ox, z: oz + D / 2 - 3.5 }, exit: { x: ox, z: oz + D / 2 - 1.4 } };
 }

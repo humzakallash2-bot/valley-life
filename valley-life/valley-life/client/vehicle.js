@@ -6,7 +6,7 @@ const tireMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9
 const rimMat = new THREE.MeshStandardMaterial({ color: 0xc8ccd2, metalness: 0.8, roughness: 0.3 });
 const WR = 0.38;
 
-export function makeCar(type, color) {
+export function makeCar(type, color, kit = 0) {
   const d = VEHICLES[type], [w, h, l] = d.size;
   const g = new THREE.Group();
   const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.55 });
@@ -31,12 +31,18 @@ export function makeCar(type, color) {
     spin.add(tire, rim); g.add(pivot);
     wheels.push({ pivot, spin, front: sz > 0 });
   }
-  g.userData = { paint, wheels, headMat, tailMat };
+  if (type === 'sports' || type === 'hyper') mk(new THREE.BoxGeometry(w * 0.16, 0.02, l * 0.98), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0, y0 + bodyH + 0.02, 0);
+  if (kit >= 1) { mk(new THREE.BoxGeometry(w * 0.95, 0.06, 0.5), paint, 0, y0 + bodyH + cabH + 0.35, -l / 2 + 0.2); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.06, 0.35, 0.3), glass, sx * w * 0.4, y0 + bodyH + cabH + 0.15, -l / 2 + 0.2); }
+  if (kit >= 2) { mk(new THREE.BoxGeometry(w + 0.1, 0.1, 0.45), glass, 0, 0.22, l / 2); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.1, 0.16, l * 0.5), glass, sx * (w / 2 + 0.02), 0.34, 0); }
+  if (kit >= 3) { const u = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.1, l * 1.05), new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.7 })); u.rotation.x = -Math.PI / 2; u.position.y = 0.06; g.add(u); }
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.8, 8), new THREE.MeshBasicMaterial({ color: 0xff8a1f, transparent: true, opacity: 0.85 }));
+  flame.rotation.x = -Math.PI / 2; flame.position.set(0, 0.55, -l / 2 - 0.9); flame.visible = false; g.add(flame);
+  g.userData = { paint, wheels, headMat, tailMat, flame };
   return g;
 }
 
-export function setCarState(g, { steer = 0, speed = 0, brake = false, head = false, dt = 0 }) {
-  const u = g.userData;
+export function setCarState(g, { steer = 0, speed = 0, brake = false, head = false, dt = 0, boost = false }) {
+  const u = g.userData; u.flame.visible = boost; if (boost) u.flame.scale.y = 0.8 + Math.random() * 0.6;
   for (const w of u.wheels) { w.spin.rotation.x += (speed * dt) / WR; if (w.front) w.pivot.rotation.y = steer * 0.5; }
   u.tailMat.emissiveIntensity = brake ? 3 : head ? 1 : 0.4;
   u.headMat.emissiveIntensity = head ? 3 : 0.2;
@@ -61,15 +67,21 @@ export function resolveCircle(p, r, cols) {
 
 // Arcade bicycle-model physics: forward heading = (sin yaw, cos yaw); +yaw turns left.
 export class VehicleSim {
-  constructor(type, x, z, yaw) { this.def = VEHICLES[type]; this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.steer = 0; this.hit = 0; }
+  constructor(type, x, z, yaw, m = {}) {
+    const b = VEHICLES[type], e = m.engine | 0, br = m.brakes | 0;
+    this.def = { ...b, maxSpeed: b.maxSpeed * (1 + 0.06 * e), accel: b.accel * (1 + 0.12 * e), brake: b.brake * (1 + 0.12 * br) };
+    this.lockK = 0.65 - 0.07 * (m.tires | 0); this.nl = m.nitro | 0; this.nitro = 100; this.boost = false; this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.steer = 0; this.hit = 0; }
   step(dt, inp, cols) {
     const d = this.def; let a = 0;
-    if (inp.up) a = this.speed < -0.5 ? d.brake : d.accel * (1 - Math.max(this.speed, 0) / d.maxSpeed);
+    this.boost = !!inp.nitro && this.nitro > 1 && !!inp.up;
+    this.nitro = this.boost ? this.nitro - (30 / (1 + 0.35 * this.nl)) * dt : Math.min(100, this.nitro + 6 * dt);
+    const mx = d.maxSpeed * (this.boost ? 1.25 : 1), ac = d.accel * (this.boost ? 1.9 : 1);
+    if (inp.up) a = this.speed < -0.5 ? d.brake : ac * (1 - Math.max(this.speed, 0) / mx);
     else if (inp.down) a = this.speed > 0.5 ? -d.brake : -d.accel * 0.5 * (1 - Math.max(-this.speed, 0) / (d.maxSpeed * 0.3));
     else a = -Math.sign(this.speed) * Math.min(Math.abs(this.speed) / dt, 3 + Math.abs(this.speed) * 0.1);
     if (inp.brake) a = -Math.sign(this.speed) * Math.min(Math.abs(this.speed) / dt, d.brake * 1.4);
-    this.speed = Math.max(-d.maxSpeed * 0.3, Math.min(d.maxSpeed, this.speed + a * dt));
-    const lock = 1 - Math.min(Math.abs(this.speed) / d.maxSpeed, 1) * 0.65;
+    this.speed = Math.max(-d.maxSpeed * 0.3, Math.min(mx, this.speed + a * dt));
+    const lock = 1 - Math.min(Math.abs(this.speed) / d.maxSpeed, 1) * this.lockK;
     const target = ((inp.left ? 1 : 0) - (inp.right ? 1 : 0)) * lock;
     this.steer += (target - this.steer) * Math.min(1, 7 * dt);
     this.yaw += (this.speed / 2.8) * Math.tan(this.steer * d.turn) * dt;

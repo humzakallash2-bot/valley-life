@@ -84,3 +84,25 @@ reached), but expect small visual/usability bugs on first run. Tell me what you 
 garage as a physical building (use **G** anywhere), passengers, text chat, mobile controls, character
 customisation, traffic/pedestrians, full road-sign/crosswalk detail. Vehicle and player positions are
 reported by each client (trusted for movement); money, ownership and job rewards are server-authoritative.
+
+## New in v0.2: racing, Brad's Shop, nitro, quests
+- **Dock buttons (bottom-left, under your cash):** Garage (G), Teleport (T), Quests (Q). Press Esc to free the mouse to click them.
+- **Tutorial:** new players are guided to spawn a car, drive into the green Tutorial Race ring and finish for **$50,000**.
+- **Races:** drive into a glowing start ring (City Race, Grand Prix, Tutorial). Two players in the ring start a 5-second countdown;
+  press **E** in the ring to race solo (pays less). City Race: 1st **$100,000**, 2nd **$10,000**, solo $15,000. Grand Prix: 1st $150,000, 2nd $25,000, solo $40,000.
+  Hit every checkpoint in order; **R** puts you back at your last checkpoint.
+- **Brad's Shop** (the grey shop on the south-east side, or teleport): engine, brakes, tire grip, nitro tank, body kit (spoiler, skirts, underglow).
+- **Nitro:** hold Shift while driving. Upgrade the tank at Brad's Shop.
+- **Aurelio Hyper** hypercar: $4,000,000 at the dealership.
+- **Daily challenges and quests:** press Q.
+
+## v0.3: saving, homes, store, fighting
+- **Saving (free):** every change is saved on the server and the server also gives your browser a signed copy of your save.
+  If the free host wipes its disk, your browser sends the copy back and your progress is restored (forged copies are rejected).
+  Use the same browser, and set a `SAVE_SECRET` environment variable on your host so the signature survives restarts.
+  Same room code = same room (rooms are re-created from the code).
+- **Starter home:** every player gets a house on a different lot with their name above it. Press H inside your own home to recolour
+  the outside, inside walls and floor, and to sell furniture. Friends can visit your home.
+- **Valley Life Mart** (orange store, north-west): buy furniture (up to 12 items). Food: Cafe, Grocery and Hospital have an NPC who sells items that restore health.
+- **Fighting:** press F to punch (everyone sees "USS!"). Health shows when you fight, regenerates after a few seconds, and if you are knocked out you wake up at home.
+- Footstep sounds when walking, and car headlights now throw a real beam at night.
