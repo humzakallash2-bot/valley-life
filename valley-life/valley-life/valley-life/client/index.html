@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valley Life</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js"}}</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="loading"><div class="logo">Valley Life</div><div class="bar"><i></i></div><p>Building the town…</p></div>
+
+<div id="menu" class="screen">
+  <div class="card">
+    <h1>Valley Life</h1>
+    <p class="sub">Open-world roleplay with friends</p>
+    <label>Your name<input id="name" maxlength="16" placeholder="Enter a name" autocomplete="off"></label>
+    <button id="btnCreate" class="primary">Create Room</button>
+    <div class="or">or join a friend</div>
+    <div class="row"><input id="codeIn" maxlength="5" placeholder="ROOM CODE" autocomplete="off"><button id="btnJoin">Join Room</button></div>
+    <p id="status" class="status">Connecting…</p>
+  </div>
+</div>
+
+<div id="lobby" class="screen hidden">
+  <div class="card">
+    <p class="sub">Room code — share it with friends</p>
+    <div id="roomCode" class="code">-----</div>
+    <button id="btnCopy">Copy code</button>
+    <h3>Players in room</h3>
+    <ul id="lobbyList" class="plist"></ul>
+    <button id="btnStart" class="primary">Start Playing</button>
+    <button id="btnLeaveLobby" class="ghost">Leave Room</button>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="cash">$0</div>
+  <div id="dock"><button id="bGar">🚗 Garage <kbd>G</kbd></button><button id="bTp">📍 Teleport <kbd>T</kbd></button><button id="bQ">⭐ Quests <kbd>Q</kbd></button></div>
+  <div id="hp" class="hidden"><i></i><span>HEALTH</span></div>
+  <div id="race" class="hidden"></div><div id="tut" class="hidden"></div><div id="nitro" class="hidden"><i></i><span>NITRO · Shift</span></div>
+  <div id="roomtag"></div>
+  <div id="jobbox" class="hidden"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="speedo" class="hidden"><span id="spd">0</span><small>km/h</small><b id="gear">N</b></div>
+  <canvas id="mini" width="170" height="170"></canvas>
+  <div id="plist" class="hidden"></div>
+  <div id="toasts"></div>
+  <div id="lockhint" class="hidden">Click to capture the mouse</div>
+  <div id="keys">WASD move · Shift run / nitro · Space jump/handbrake · E interact · G garage · T teleport · Q quests · F punch · H decorate (inside your home) · R reset to checkpoint · L lights · Esc pause</div>
+</div>
+
+<div id="dealer" class="panel hidden"><div class="inner wide">
+  <button class="close">✕</button><h2>Vehicle Dealership</h2>
+  <div class="split"><div id="dealList" class="list"></div>
+  <div><canvas id="dealCanvas" width="420" height="260"></canvas><div id="dealInfo"></div><button id="dealBuy" class="primary"></button></div></div>
+</div></div>
+
+<div id="garage" class="panel hidden"><div class="inner wide">
+  <button class="close">✕</button><h2>Garage &amp; Properties</h2>
+  <div class="tabs"><button data-tab="veh" class="on">Vehicles</button><button data-tab="props">Properties</button></div>
+  <div id="garBody"></div>
+</div></div>
+
+<div id="jobs" class="panel hidden"><div class="inner">
+  <button class="close">✕</button><h2>Job Center</h2><div id="jobBody"></div>
+</div></div>
+
+<div id="housep" class="panel hidden"><div class="inner">
+  <button class="close">✕</button><h2 id="houseTitle"></h2><div id="houseBody"></div>
+</div></div>
+
+<div id="shop" class="panel hidden"><div class="inner wide"><button class="close">✕</button><h2>Brad’s Shop</h2><p class="sub">Upgrades apply the next time you get in the car.</p><div id="shopBody"></div></div></div>
+<div id="tp" class="panel hidden"><div class="inner"><button class="close">✕</button><h2>Teleport</h2><div id="tpBody"></div></div></div>
+<div id="quests" class="panel hidden"><div class="inner"><button class="close">✕</button><h2>Quests &amp; Daily Challenges</h2><div id="qBody"></div></div></div>
+
+<div id="venue" class="panel hidden"><div class="inner"><button class="close">✕</button><h2 id="venTitle"></h2><div id="venBody"></div></div></div>
+<div id="mart" class="panel hidden"><div class="inner wide"><button class="close">✕</button><h2>Valley Life Mart</h2><p class="sub">Furniture is delivered straight to your house (max 12 items).</p><div id="martBody"></div></div></div>
+<div id="homep" class="panel hidden"><div class="inner"><button class="close">✕</button><h2>Decorate your home</h2><div id="homeBody"></div></div></div>
+
+<div id="pause" class="panel hidden"><div class="inner">
+  <h2>Paused</h2>
+  <button id="pResume" class="primary">Resume</button>
+  <label class="slide">Volume <input id="setVol" type="range" min="0" max="100" value="60"></label>
+  <label class="slide">Mouse sensitivity <input id="setSens" type="range" min="20" max="200" value="100"></label>
+  <button id="pLeave" class="ghost">Leave Room</button>
+</div></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
