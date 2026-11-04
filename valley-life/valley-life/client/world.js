@@ -24,6 +24,13 @@ function facadeTex() {
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
+function grassTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#4f8f3a'; g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 1100; i++) { g.fillStyle = `hsl(${92 + Math.random() * 34},${45 + Math.random() * 25}%,${26 + Math.random() * 24}%)`; g.fillRect(Math.random() * 128, Math.random() * 128, 1 + Math.random() * 2, 2 + Math.random() * 4); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+
 export function buildWorld(scene) {
   const R = rng(7), colliders = [], facade = facadeTex();
   const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra });
@@ -34,7 +41,7 @@ export function buildWorld(scene) {
   };
 
   // ground, roads, lane dashes, block slabs
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), std(0x4f8a3b)); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.1; ground.receiveShadow = true; scene.add(ground);
+  const gmap = grassTex(); gmap.repeat.set(240, 240); const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshStandardMaterial({ map: gmap, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.1; ground.receiveShadow = true; scene.add(ground);
   const roadCol = 0x34373d;
   for (const L of ROAD.lines) {
     box(400, 0.1, ROAD.width, roadCol, 0, -0.05, L, false).receiveShadow = true;
@@ -111,6 +118,27 @@ export function buildWorld(scene) {
     addC(x, z, 0.8, 0.8, 5);
   });
   scene.add(trunk, crown);
+
+  // landscaping: real grass lawns, oak trees along the roads, bushes, flowers and rocks
+  const lawn = gmap.clone(); lawn.needsUpdate = true; lawn.repeat.set(16, 16);
+  for (const bx of BLOCKS) { const l = new THREE.Mesh(new THREE.PlaneGeometry(66, 66), new THREE.MeshStandardMaterial({ map: lawn, roughness: 1 })); l.rotation.x = -Math.PI / 2; l.position.set(bx, 0.012, 120); l.receiveShadow = true; scene.add(l); }
+  const cc = new THREE.Color(), place = (geo, m, pts, fn) => { const im = new THREE.InstancedMesh(geo, m, pts.length); pts.forEach((p, i) => { fn(p, i, im); im.setMatrixAt(i, mtx); }); im.castShadow = true; scene.add(im); return im; };
+  const oaks = [];
+  for (const t of [-72, -52, -32, -12, 12, 32, 52, 72]) for (const s of [-1, 1]) oaks.push([t, s * 10.5]);
+  for (const l of [-80, 0, 80]) for (const z of [-52, -32, 32, 52]) for (const s of [-1, 1]) oaks.push([l + s * 10.5, z]);
+  place(new THREE.CylinderGeometry(0.28, 0.38, 2.6, 6), std(0x6b4a2b), oaks, ([x, z], i) => { mtx.makeTranslation(x, 1.3, z); addC(x, z, 0.8, 0.8, 6); });
+  place(new THREE.SphereGeometry(2.3, 10, 8), std(0xffffff), oaks, ([x, z], i, im) => { const s = 0.85 + R() * 0.5; mtx.makeScale(s, s * 0.9, s).setPosition(x, 4.1 * s, z); im.setColorAt(i, cc.setHSL(0.24 + R() * 0.08, 0.5, 0.26 + R() * 0.12)); });
+  const bushes = []; for (const h of [...HOUSES, ...HOME_SLOTS]) for (const ox of [-5.5, -3, 3, 5.5]) bushes.push([h.x + ox, h.z + h.face * 6.9]);
+  place(new THREE.SphereGeometry(1, 8, 6), std(0xffffff), bushes, ([x, z], i, im) => { const s = 0.6 + R() * 0.4; mtx.makeScale(s * 1.2, s * 0.8, s * 1.2).setPosition(x, 0.5 * s, z); im.setColorAt(i, cc.setHSL(0.27 + R() * 0.06, 0.55, 0.22 + R() * 0.1)); });
+  const flowers = [], rocks = [];
+  for (let i = 0; i < 520; i++) {
+    const x = BLOCKS[(R() * 4) | 0] + (R() - 0.5) * 62, z = 120 + (R() - 0.5) * 62;
+    if (HOUSES.some(h => Math.abs(x - h.x) < h.w / 2 + 2 && Math.abs(z - h.z) < h.d / 2 + 2) || HOME_SLOTS.some(h => Math.abs(x - h.x) < 9 && Math.abs(z - h.z) < 8)) continue;
+    (i % 13 === 0 ? rocks : flowers).push([x, z]);
+  }
+  const FC = [0xff5a7a, 0xffd23f, 0xffffff, 0xc77dff, 0xff9f1c];
+  place(new THREE.SphereGeometry(0.2, 6, 4), std(0xffffff), flowers, ([x, z], i, im) => { mtx.makeTranslation(x, 0.18, z); im.setColorAt(i, cc.setHex(FC[(R() * FC.length) | 0])); });
+  place(new THREE.DodecahedronGeometry(0.6), std(0xffffff), rocks, ([x, z], i, im) => { const s = 0.5 + R() * 0.9; mtx.makeScale(s, s * 0.7, s).setPosition(x, 0.25 * s, z); im.setColorAt(i, cc.setHSL(0, 0, 0.35 + R() * 0.2)); });
 
   // streetlights (instanced); lamp glow driven by time of day
   const lamps = [];
