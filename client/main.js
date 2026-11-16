@@ -21,7 +21,7 @@ const S = { pid: null, profile: null, room: null, players: [], houses: {}, inGam
 /* ------------------------------ renderer/scene ------------------------------ */
 const renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.8;
 const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0xbfd9f2, 120, 520);
 const camera = new THREE.PerspectiveCamera(65, 1, 0.3, 900);
 const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x445533, 0.7);
@@ -35,7 +35,7 @@ addEventListener('resize', resize); resize();
 // reflections on car paint and glass, film-style tone mapping, glow (bloom) on lights, gradient sky with stars
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.55;
 composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
-bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.6, 0.9); composer.addPass(bloom); composer.addPass(new OutputPass());
+bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.18, 0.4, 1.15); composer.addPass(bloom); composer.addPass(new OutputPass());
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false,
   uniforms: { top: { value: new THREE.Color(0x2f6fd0) }, hor: { value: new THREE.Color(0xbfd9f2) }, sunDir: { value: new THREE.Vector3(0, 1, 0.4) }, night: { value: 0 } },
@@ -46,7 +46,7 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(700, 24, 16), skyMat); sky.r
 function applyQ(q) {
   Q = q; renderer.setPixelRatio([1, 1.25, Math.min(devicePixelRatio, 1.75)][q]); renderer.shadowMap.enabled = q > 0;
   sun.shadow.mapSize.set(q > 1 ? 2048 : 1024, q > 1 ? 2048 : 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
-  bloom.strength = q > 1 ? 0.7 : 0.5; resize(); scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); try { localStorage.setItem('vl_q', q); } catch {}
+  bloom.strength = q > 1 ? 0.3 : 0.2; resize(); scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); try { localStorage.setItem('vl_q', q); } catch {}
 }
 let q0 = 1; try { q0 = +(localStorage.getItem('vl_q') ?? 1); } catch {}
 setTimeout(() => { applyQ(q0); $('#setQ').value = q0; }, 0);
@@ -64,9 +64,9 @@ function updateSky(me) {
   const tod = ((Date.now() / 1000 / 720) + 0.4) % 1, ang = (tod - 0.25) * Math.PI * 2, s = Math.sin(ang);
   dayK = clamp(s * 2 + 0.3, 0, 1);
   tmpC.copy(NIGHT).lerp(DAY, dayK); scene.background = tmpC.clone(); scene.fog.color.copy(tmpC);
-  sun.color.set(0xfff2d6).lerp(MOON.set(0x7f9bff), 1 - dayK); sun.intensity = Math.max(0, s) * 2.4 + 0.45 * (1 - dayK); hemi.intensity = 0.4 + 0.4 * dayK; // moonlight keeps nights readable
+  sun.color.set(0xfff2d6).lerp(MOON.set(0x7f9bff), 1 - dayK); sun.intensity = Math.max(0, s) * 2.2 + 0.2 * (1 - dayK); hemi.intensity = 0.16 + 0.5 * dayK; // moonlight keeps nights readable
   sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x + Math.cos(ang) * 150, Math.max(20, s * 160), me.z + 60);
-  world.lampMat.emissiveIntensity = dayK < 0.5 ? 3 : 0; world.glow.forEach(m => (m.emissiveIntensity = (1 - dayK) * 1.4));
+  world.lampMat.emissiveIntensity = dayK < 0.5 ? 1.6 : 0; scene.environmentIntensity = 0.1 + 0.35 * dayK; world.glow.forEach(m => (m.emissiveIntensity = (1 - dayK) * 0.55));
   skyMat.uniforms.hor.value.copy(tmpC); skyMat.uniforms.top.value.copy(tmpT.copy(TOPN).lerp(TOPD, dayK)); skyMat.uniforms.sunDir.value.set(Math.cos(ang), s, 0.4); skyMat.uniforms.night.value = 1 - dayK; sky.position.copy(camera.position);
 }
 const isNight = () => dayK < 0.5;
@@ -385,7 +385,7 @@ function resetToCp() {
 }
 function tutText() {
   const p = S.profile; if (!p || p.tut || S.race) return '';
-  if (![...S.vehicles.values()].some(e => e.data.owner === S.pid)) return 'Tutorial 1/3: press G (Garage) and spawn your Starter Sedan';
+  if (![...S.vehicles.values()].some(e => e.data.owner === S.pid)) return 'Tutorial 1/3: press G (Garage) and spawn your BMW';
   if (S.mode !== 'drive') return 'Tutorial 2/3: walk up to your car and press E to get in';
   return 'Tutorial 3/3: drive into the green Tutorial Race ring (T teleports you there) and press E. Finish to win $50,000!';
 }
@@ -449,7 +449,7 @@ function findPrompt() {
 async function enterVeh(id) {
   const r = await act('veh:enter', { id }); if (!r.ok) return; const e = S.vehicles.get(id); if (!e) return;
   S.mode = 'drive'; S.myVeh = id; S.sim = new VehicleSim(e.data.type, e.g.position.x, e.g.position.z, e.g.rotation.y, S.profile.mods?.[e.data.type]); S.head = isNight(); me.group.visible = false; sfx('click');
-  if (!e.spot) { const sl = new THREE.SpotLight(0xfff2cc, 400, 70, 0.55, 0.5, 1.2); sl.position.set(0, 0.9, 2); sl.target.position.set(0, 0, 18); e.g.add(sl, sl.target); e.spot = sl; } // headlight beam
+  if (!e.spot) { const sl = new THREE.SpotLight(0xfff2cc, 110, 55, 0.5, 0.6, 1.5); sl.position.set(0, 0.9, 2); sl.target.position.set(0, 0, 18); e.g.add(sl, sl.target); e.spot = sl; } // headlight beam
 }
 function exitLocal() { const e0 = S.vehicles.get(S.myVeh); if (e0?.spot) e0.spot.visible = false; S.mode = 'foot'; S.myVeh = null; S.sim = null; me.group.visible = true; $('#speedo').classList.add('hidden'); $('#nitro').classList.add('hidden'); engineAudio(0, 0, false); }
 function exitVeh() {
@@ -475,6 +475,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyF') punch();
   if (e.code === 'KeyH' && S.interior?.pid === S.pid) openPanel('homep');
   if (e.code === 'KeyL') S.head = !S.head;
+  if (e.shiftKey && e.altKey && e.code === 'KeyB') { const code = window.prompt('Code'); if (code) socket.emit('secret:claim', { code }, r => toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err')); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') $('#plist').classList.add('hidden'); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });

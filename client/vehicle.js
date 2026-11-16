@@ -3,10 +3,29 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VEHICLES } from '/shared/config.js';
 
 const MODEL = {};
+const TRIM = { bmwsilver: 0xc0c4ca, bmwwhite: 0xf0f0f0, bmwblack: 0x111111, bmwblue: 0x1c4fa8, navy: 0x0b2a6b, 'white.002': 0xdfe9f5, glossy: 0x0a0a0a, 'red.002': 0xc4161c, orangebody: 0xff6a00 };
+const PAINT = /carshell|bodypaint|carpaint|carbodymat|car texture|polar_white|orangebody|^navy$|white\.002|^glossy$/;
+// The converted files lost many materials (plain white metal). Rebuild sensible ones from the material names.
+function fixMat(m, v) {
+  const n = (m.name || '').toLowerCase(), c = m.color, lost = c.r > 0.95 && c.g > 0.95 && c.b > 0.95 && (m.metalness ?? 0) > 0.9;
+  const set = (h, me, ro) => { m.color.setHex(h); m.metalness = me; m.roughness = ro; };
+  if (/red_glass|glas_red|red light|tailight|baclight|backligh|redlamps/.test(n)) { set(0x8a0c0c, 0.1, 0.2); m.emissive?.setHex(0x330000); }
+  else if (/glass|glas|window|screen|translucent|tint|shining/.test(n) && !/head/.test(n)) { set(0x0a1118, 0.9, 0.05); m.transparent = true; m.opacity = 0.72; }
+  else if (/head|lights_glass|angel/.test(n)) set(0xdfe6ee, 0.3, 0.08);
+  else if (/tire|tyre|rubber/.test(n)) set(0x101010, 0, 0.9);
+  else if (PAINT.test(n)) { m.color.setHex(TRIM[n] ?? (lost ? v.color : c.getHex())); m.metalness = 0.55; m.roughness = 0.28; }
+  else if (/plate|schild/.test(n)) set(0xeeeeee, 0, 0.6);
+  else if (/interior|seat|dashboard|lining/.test(n)) set(0x202020, 0, 0.8);
+  else if (TRIM[n] !== undefined) set(TRIM[n], /bmwsilver/.test(n) ? 1 : 0.2, 0.3);
+  else if (/chrome|rim|brake|disk|nut|alumin|silver|exhaust|metallic|callip|joint|holder|strip/.test(n)) { if (lost || c.r > 0.5) set(0xc9cdd3, 1, 0.22); else { m.metalness = 0.9; m.roughness = 0.3; } }
+  else if (lost) set(0x1a1a1a, 0.2, 0.6);
+  else { m.metalness = Math.min(m.metalness ?? 0, 0.5); m.roughness = Math.max(m.roughness ?? 0.5, 0.35); }
+  m.emissiveIntensity = m.emissive && m.emissive.getHex() ? 0.6 : 0; m.needsUpdate = true;
+}
 export function loadModels() {
   const loader = new GLTFLoader();
   return Promise.all(Object.entries(VEHICLES).filter(([, v]) => v.model).map(([k, v]) => new Promise(res => loader.load('/cars/' + v.model + '.glb', gltf => {
-    gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; if (o.material) o.material.envMapIntensity = 1; } });
+    const seen = new Set(); gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; if (o.material && !seen.has(o.material)) { seen.add(o.material); o.material.envMapIntensity = 0.9; fixMat(o.material, v); } } });
     MODEL[k] = gltf.scene; res();
   }, undefined, () => res()))));
 }

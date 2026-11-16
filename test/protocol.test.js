@@ -18,7 +18,7 @@ fs.writeFileSync(path.join(dir, 'valley-life.json'), JSON.stringify({ rooms: {},
 
 let proc;
 const startServer = () => new Promise((res, rej) => {
-  proc = spawn('node', ['server/index.js'], { env: { ...process.env, PORT, DATA_DIR: dir, SAVE_SECRET: 'test-secret' }, stdio: ['ignore', 'pipe', 'inherit'] });
+  proc = spawn('node', ['server/index.js'], { env: { ...process.env, PORT, DATA_DIR: dir, SAVE_SECRET: 'test-secret', SECRET_CODE: 'test-gold', SECRET_X: '-243', SECRET_Z: '247' }, stdio: ['ignore', 'pipe', 'inherit'] });
   proc.stdout.on('data', d => { if (String(d).includes('running')) res(); });
   proc.on('exit', c => c && rej(new Error('server exited ' + c)));
 });
@@ -182,6 +182,13 @@ try {
   await sleep(5200); t('health regenerates after a few seconds', Ec.hp > 90);
   for (let i = 0; i < 12; i++) { await sleep(470); await call(Dc, 'fight:punch'); }
   await sleep(150); t('knocked-out player is sent back home', Ec.resp === true);
+  // --- hidden $1,000,000,000 spot ---
+  t('wrong secret code does nothing', (await call(Ec, 'secret:claim', { code: 'nope' })).error === 'Nothing happens');
+  pos(Ec, 0, 0); await sleep(150);
+  t('right code far away only gives a distance hint', /Not here/.test((await call(Ec, 'secret:claim', { code: 'test-gold' })).error));
+  pos(Ec, -243, 247); await sleep(150); const cashBefore = Ec.profile.cash;
+  t('right code at the hidden spot pays $1,000,000,000', (await call(Ec, 'secret:claim', { code: 'test-gold' })).ok && (await sleep(150), Ec.profile.cash === cashBefore + 1e9));
+  t('it can only be claimed once per player', (await call(Ec, 'secret:claim', { code: 'test-gold' })).error === 'Already claimed');
   // --- free saving: signed save copy survives a wiped server ---
   await call(Dc, 'veh:paint', { type: 'sedan', color: 0xe53935 }); await sleep(150);
   const blob = Dc.blob; t('server hands out a signed save copy', !!blob && !!blob.sig);
