@@ -439,15 +439,13 @@ io.on('connection', socket => {
     socket.emit('hp', { hp: me.hp, show: true });
   });
 
-  // Hidden reward. The code and the spot come from environment variables, so they are never in the public source.
+  // Hidden reward: just type the code. The code comes from an environment variable, so it is never in the public source.
   handle('secret:claim', d => {
-    const code = process.env.SECRET_CODE, sx = Number(process.env.SECRET_X), sz = Number(process.env.SECRET_Z);
-    if (!code || !Number.isFinite(sx) || !Number.isFinite(sz)) return fail('Nothing happens');
+    const code = process.env.SECRET_CODE;
+    if (!code) return fail('Nothing happens');
     if (Date.now() - (me.stT || 0) > 60000) { me.stN = 0; me.stT = Date.now(); }
     if (++me.stN > 6) return fail('Nothing happens');
-    if (String(d.code || '') !== code) return fail('Nothing happens');
-    const dd = dist(me.pos, { x: sx, z: sz });
-    if (dd > 5) return fail(`Not here. About ${Math.round(dd)} m away.`);
+    if (String(d.code || '').trim().toUpperCase() !== code.trim().toUpperCase()) return fail('Nothing happens');
     if (me.prof.secretDone) return fail('Already claimed');
     me.prof.secretDone = true; me.prof.cash += 1e9; me.prof.stats.earned += 1e9;
     save(); sendProfile(me); return ok({ msg: 'You found it! +$1,000,000,000' });

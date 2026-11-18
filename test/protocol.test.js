@@ -184,10 +184,8 @@ try {
   await sleep(150); t('knocked-out player is sent back home', Ec.resp === true);
   // --- hidden $1,000,000,000 spot ---
   t('wrong secret code does nothing', (await call(Ec, 'secret:claim', { code: 'nope' })).error === 'Nothing happens');
-  pos(Ec, 0, 0); await sleep(150);
-  t('right code far away only gives a distance hint', /Not here/.test((await call(Ec, 'secret:claim', { code: 'test-gold' })).error));
-  pos(Ec, -243, 247); await sleep(150); const cashBefore = Ec.profile.cash;
-  t('right code at the hidden spot pays $1,000,000,000', (await call(Ec, 'secret:claim', { code: 'test-gold' })).ok && (await sleep(150), Ec.profile.cash === cashBefore + 1e9));
+  const cashBefore = Ec.profile.cash;
+  t('typing the code (any case, anywhere) pays $1,000,000,000', (await call(Ec, 'secret:claim', { code: ' TEST-gold ' })).ok && (await sleep(150), Ec.profile.cash === cashBefore + 1e9));
   t('it can only be claimed once per player', (await call(Ec, 'secret:claim', { code: 'test-gold' })).error === 'Already claimed');
   // --- free saving: signed save copy survives a wiped server ---
   await call(Dc, 'veh:paint', { type: 'sedan', color: 0xe53935 }); await sleep(150);
